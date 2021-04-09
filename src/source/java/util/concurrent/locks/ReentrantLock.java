@@ -157,7 +157,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
             setState(c);
             return free;
         }
-
+        //当前同步器是否在独占模式下被线程占用，一般该方法表示是否被当前线程占用
         protected final boolean isHeldExclusively() {
             // While we must in general read state before owner,
             // we don't need to do so to check if current thread is owner

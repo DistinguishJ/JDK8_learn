@@ -561,6 +561,7 @@ public abstract class AbstractQueuedSynchronizer
      * @return {@code true} if successful. False return indicates that the actual
      *         value was not equal to the expected value.
      */
+    //使用CAS设置当前状态，该方法能够保证状态设置的原子性
     protected final boolean compareAndSetState(int expect, int update) {
         // See below for intrinsics setup to support this
         return unsafe.compareAndSwapInt(this, stateOffset, expect, update);
@@ -583,10 +584,10 @@ public abstract class AbstractQueuedSynchronizer
     private Node enq(final Node node) {
         for (;;) {
             Node t = tail;
-            if (t == null) { // Must initialize
+            if (t == null) { // Must initialize 队列为空，创建一个空的标志结点作为head结点，并将tail也指向它
                 if (compareAndSetHead(new Node()))
                     tail = head;
-            } else {
+            } else {    //正常流程，放入队尾
                 node.prev = t;
                 if (compareAndSetTail(t, node)) {
                     t.next = node;
@@ -603,6 +604,7 @@ public abstract class AbstractQueuedSynchronizer
      * @return the new node
      */
     private Node addWaiter(Node mode) {
+        //以给定模式构造结点。mode有两种：EXCLUSIVE(独占)和SHARED（共享）
         Node node = new Node(Thread.currentThread(), mode);
         // Try the fast path of enq; backup to full enq on failure
         Node pred = tail;
@@ -1072,6 +1074,9 @@ public abstract class AbstractQueuedSynchronizer
      *         correctly.
      * @throws UnsupportedOperationException if exclusive mode is not supported
      */
+    /*
+    * AQS只是一个框架，具体资源的获取/释放方法交由自定义同步器去实现（通过state的get/set/CAS）
+    * */
     protected boolean tryAcquire(int arg) {
         throw new UnsupportedOperationException();
     }
@@ -1178,6 +1183,7 @@ public abstract class AbstractQueuedSynchronizer
      *         {@code false} otherwise
      * @throws UnsupportedOperationException if conditions are not supported
      */
+    //当前同步器是否在独占模式下被线程占用，一般该方法表示是否被当前线程独占
     protected boolean isHeldExclusively() {
         throw new UnsupportedOperationException();
     }
@@ -1194,6 +1200,14 @@ public abstract class AbstractQueuedSynchronizer
      *        {@link #tryAcquire} but is otherwise uninterpreted and
      *        can represent anything you like.
      */
+
+    /*
+    * 函数流程：
+    * 1. tryAcquire()尝试直接去获取资源，如果成功则直接返回（这里体现了非公平锁，每个线程获取锁时会尝试直接抢占加塞一次，而CLH队列中可能还有别的线程在等待）；
+    * 2. addWaiter()将该线程加入等待队列的尾部，并标记为独占模式
+    * 3. acquireQueued()使线程阻塞在等待队列中获取资源，一直获取到资源后才返回。如果整个等待过程中被中断，则返回true，否则返回false
+    * 4. 如果线程在等待过程中被中断，它是不响应的。只是获取资源后才再进行自我中断selfInterrupt()，将中断补上
+    * */
     public final void acquire(int arg) {
         if (!tryAcquire(arg) &&
             acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
