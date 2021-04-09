@@ -10,6 +10,7 @@ public class Main {
         res2 = Math.max(res1, res2);
         res2 = Math.max(res2, res1);
         System.out.println(res1);
+        System.out.println("123");
     }
 
 
