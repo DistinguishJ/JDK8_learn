@@ -263,7 +263,7 @@ public class ReentrantReadWriteLock
         static final int SHARED_UNIT    = (1 << SHARED_SHIFT);
         static final int MAX_COUNT      = (1 << SHARED_SHIFT) - 1;
         static final int EXCLUSIVE_MASK = (1 << SHARED_SHIFT) - 1;
-
+        //将同步变量state按照高16位和低16位进行划分，高16位表示读锁，低16位表示写锁
         /** Returns the number of shared holds represented in count  */
         static int sharedCount(int c)    { return c >>> SHARED_SHIFT; }
         /** Returns the number of exclusive holds represented in count  */
@@ -367,6 +367,7 @@ public class ReentrantReadWriteLock
          */
 
         protected final boolean tryRelease(int releases) {
+            //在释放过程中，不断减少读锁的同步状态，当同步状态为0时，写锁完全释放
             if (!isHeldExclusively())
                 throw new IllegalMonitorStateException();
             int nextc = getState() - releases;
@@ -392,16 +393,17 @@ public class ReentrantReadWriteLock
             Thread current = Thread.currentThread();
             int c = getState();
             int w = exclusiveCount(c);
-            if (c != 0) {
+            if (c != 0) {   //说明存在读锁或写锁
                 // (Note: if c != 0 and w == 0 then shared count != 0)
                 if (w == 0 || current != getExclusiveOwnerThread())
-                    return false;
+                    return false;   //存在读锁或当前线程不是上次获取写锁的线程（独占锁），则不能获取写锁（保证写对读的可见性）
                 if (w + exclusiveCount(acquires) > MAX_COUNT)
                     throw new Error("Maximum lock count exceeded");
                 // Reentrant acquire
-                setState(c + acquires);
+                setState(c + acquires); //增加写锁同步状态
                 return true;
             }
+            //不存在锁则将当前线程设置为写锁的获取线程
             if (writerShouldBlock() ||
                 !compareAndSetState(c, c + acquires))
                 return false;

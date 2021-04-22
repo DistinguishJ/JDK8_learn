@@ -113,6 +113,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
      * into fair and nonfair versions below. Uses AQS state to
      * represent the number of holds on the lock.
      */
+    //使用AQS的state字段，来表示当前锁的持有数量，从而实现可重入的特性
     abstract static class Sync extends AbstractQueuedSynchronizer {
         private static final long serialVersionUID = -5179523762034025860L;
 
@@ -120,12 +121,16 @@ public class ReentrantLock implements Lock, java.io.Serializable {
          * Performs {@link Lock#lock}. The main reason for subclassing
          * is to allow fast path for nonfair version.
          */
-        abstract void lock();
+        abstract void lock();       //由子类FairSync和NonfairSync实现
 
         /**
          * Performs non-fair tryLock.  tryAcquire is implemented in
          * subclasses, but both need nonfair try for trylock method.
          */
+        /*
+        * 首先判断临界区是否处于无锁状态，如果无锁则修改同步状态（加锁）；如果有锁，判断上次获取锁
+        * 的线程是否为当前线程，如果是则可再次进入临界区，如果不是，则阻塞。（没有同步队列）
+        * */
         final boolean nonfairTryAcquire(int acquires) {
             final Thread current = Thread.currentThread();
             int c = getState();
@@ -134,7 +139,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
                     setExclusiveOwnerThread(current);
                     return true;
                 }
-            }
+            }//临界区处于锁定状态，且上次获取锁的线程为当前线程
             else if (current == getExclusiveOwnerThread()) {
                 int nextc = c + acquires;
                 if (nextc < 0) // overflow
@@ -231,7 +236,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
         protected final boolean tryAcquire(int acquires) {
             final Thread current = Thread.currentThread();
             int c = getState();
-            if (c == 0) {
+            if (c == 0) {//判断同步队列中当前结点是否有前驱结点
                 if (!hasQueuedPredecessors() &&
                     compareAndSetState(0, acquires)) {
                     setExclusiveOwnerThread(current);

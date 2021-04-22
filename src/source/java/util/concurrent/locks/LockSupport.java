@@ -117,7 +117,7 @@ import sun.misc.Unsafe;
  *   }
  * }}</pre>
  */
-public class LockSupport {
+public class LockSupport {  //用来创建锁和其他同步类的基本线程阻塞原语
     private LockSupport() {} // Cannot be instantiated.
 
     private static void setBlocker(Thread t, Object arg) {
